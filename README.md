@@ -2,6 +2,16 @@
 ![Audit workflow flow diagram](flow-diagram.png)
 Focused CA-firm audit document workflow with **production-oriented scalability foundations**.
 
+## Run the Published Docker Image
+
+Pull the published application image directly from Docker Hub:
+
+```bash
+docker pull abhirajadhikary06/obliq-audit:latest
+```
+
+To run the complete local stack, including PostgreSQL, Redis, MinIO, Celery, and the web application, use Docker Compose below. The image above is the application container used by the stack.
+
 ## Quick Start
 
 ```bash
