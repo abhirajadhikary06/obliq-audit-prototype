@@ -151,9 +151,3 @@ obliq-audit/
 4. **Stronger audit integrity** — Hash-chain the audit events so history is tamper-evident even against a compromised DB admin.
 5. **Per-firm rate / quota controls** — Soft limits on storage and concurrent reviews so one noisy firm cannot starve others.
 6. **Notification channel** — Email/Slack when a document enters “Correction Required” or is approved (still the biggest real-world friction).
-
-These are the highest-leverage next steps for a multi-firm pilot; none of them expand into tax calculation or government portals.
-
----
-
-Evaluation prototype for OBLIQ-in. Not production-hardened (no TLS termination inside the compose file, default credentials, etc.).

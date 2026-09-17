@@ -47,6 +47,8 @@ def create_app():
     # ---------- Database (with connection pooling) ----------
     database_url = os.getenv('DATABASE_URL')
     if database_url:
+        # Some hosted PostgreSQL providers still expose the legacy postgres:// scheme.
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
         app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     else:
         basedir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
