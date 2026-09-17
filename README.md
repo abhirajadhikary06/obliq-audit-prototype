@@ -1,5 +1,5 @@
-# OBLIQ-in Mini Audit Document Review System (Scalable Edition)
-
+# OBLIQ-in Mini Audit Document Review System
+![Audit workflow flow diagram](flow-diagram.png)
 Focused CA-firm audit document workflow with **production-oriented scalability foundations**.
 
 ## Quick Start
