@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}OBLIQ Audit{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+<header class="topbar">
+    <div class="topbar-inner">
+        <a class="brand" href="{{ url_for('main.dashboard') if current_user.is_authenticated else url_for('auth.login') }}">OBLIQ<span>audit</span></a>
+        {% if current_user.is_authenticated %}
+        <nav class="nav" aria-label="Primary navigation">
+            <a href="{{ url_for('main.dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('main.clients') }}">Clients</a>
+            {% if current_user.is_reviewer() %}<a href="{{ url_for('main.audit_history') }}">Audit history</a>{% endif %}
+            {% if current_user.role.value == 'admin' %}<span class="nav-sep"></span><a href="{{ url_for('main.admin_users') }}">Users</a><a href="{{ url_for('main.admin_settings') }}">Settings</a>{% endif %}
+        </nav>
+        <div class="user-chip">
+            <span class="firm-tag">{{ current_user.firm.name }}</span>
+            <span class="role-tag role-{{ current_user.role.value }}">{{ current_user.role.value }}</span>
+            <form class="inline-form" method="POST" action="{{ url_for('auth.logout') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-ghost" type="submit">Log out</button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+</header>
+<main class="container{% if not current_user.is_authenticated %} container-narrow{% endif %}">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}<div class="flash-stack">{% for category, message in messages %}<div class="flash flash-{{ 'error' if category in ['danger', 'error'] else category }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+</main>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

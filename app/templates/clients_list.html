@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Clients — OBLIQ Audit{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div><h1 class="page-title">Clients</h1><p class="page-sub">{{ current_user.firm.name }} · {{ clients|length }} client{{ '' if clients|length == 1 else 's' }}</p></div>
+    {% if current_user.role.value == 'admin' %}<a class="btn btn-primary" href="{{ url_for('main.create_client') }}">New client</a>{% endif %}
+</div>
+<div class="row-list">
+{% for client in clients %}
+    {% set docs = client.documents %}
+    {% set complete = docs|selectattr('status.value', 'equalto', 'approved')|list|length %}
+    <a class="row-item" href="{{ url_for('main.client_detail', client_id=client.id) }}">
+        <span><span class="row-title">{{ client.name }}</span><br><span class="row-meta">{{ docs|length }} required documents · {{ complete }} approved</span></span>
+        <span class="row-meta">{{ client.created_at|ist_datetime('%d %b %Y') }} →</span>
+    </a>
+{% else %}
+    <p class="empty">No clients yet. Create your first client to begin.</p>
+{% endfor %}
+</div>
+{% endblock %}

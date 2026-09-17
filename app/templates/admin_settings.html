@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Settings — OBLIQ Audit{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1 class="page-title">Firm settings</h1><p class="page-sub">Administrator area · {{ current_user.firm.name }}</p></div></div>
+<form class="stacked-form" method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="name">Firm name</label><input id="name" type="text" name="name" value="{{ firm.name }}" required>
+    <button class="btn btn-primary" type="submit">Save settings</button>
+</form>
+{% endblock %}

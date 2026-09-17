@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Audit trail — OBLIQ Audit{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1 class="page-title">Audit trail</h1><p class="page-sub">{{ current_user.firm.name }} — every recorded action, most recent first</p></div></div>
+<form method="GET" class="filter-row">
+    <label for="client-filter">Client</label>
+    <select id="client-filter" name="client_id" onchange="this.form.submit()">
+        <option value="">All clients</option>
+        {% for client in clients %}<option value="{{ client.id }}" {% if selected_client_id == client.id %}selected{% endif %}>{{ client.name }}</option>{% endfor %}
+    </select>
+    <label for="action-filter">Action</label>
+    <select id="action-filter" name="action"><option value="">All actions</option>{% for value in action_options %}<option value="{{ value }}" {% if selected_action == value %}selected{% endif %}>{{ value.replace('_', ' ')|title }}</option>{% endfor %}</select>
+    <label for="actor-filter">Actor</label><input id="actor-filter" name="actor" value="{{ selected_actor }}" placeholder="Actor name">
+    <button class="btn btn-secondary" type="submit">Filter</button>
+    {% if selected_client_id or selected_action or selected_actor %}<a class="btn btn-ghost" href="{{ url_for('main.audit_history') }}">Clear</a>{% endif %}
+</form>
+<div class="timeline audit-timeline">
+{% for event in events.items %}
+    <article class="timeline-item">
+        <div class="timeline-time mono">{{ event.created_at|ist_datetime }}</div>
+        <div class="timeline-rule"></div>
+        <div class="timeline-body">
+            <p><strong>{{ event.actor_name }}</strong>
+            {% if event.action == 'approved_document' %} approved the document
+            {% elif event.action == 'requested_correction' %} requested a correction
+            {% elif event.action == 'started_review' %} started reviewing the document
+            {% elif event.action == 'uploaded_document' %} uploaded the document
+            {% elif event.action == 'uploaded_revised_document' %} uploaded a revised document
+            {% elif event.action == 'created_client' %} created this client
+            {% elif event.action == 'added_document_requirement' %} added a document requirement
+            {% elif event.action == 'created_user' %} created a user
+            {% else %} {{ event.action.replace('_', ' ') }}{% endif %}</p>
+            <p class="row-meta">
+                {% if event.client %}<span class="pill">{{ event.client.name }}</span>{% endif %}
+                {% if event.document %}<span class="pill">{{ event.document.name }}</span>{% elif event.entity_type == 'client' %}<span class="pill">{{ event.entity_name }}</span>{% endif %}
+            </p>
+            {% if event.details %}<p class="timeline-comment">{{ event.details }}</p>{% endif %}
+        </div>
+    </article>
+{% else %}<p class="empty">No audit events match these filters.</p>{% endfor %}
+</div>
+{% if events.pages > 1 %}<div class="action-row"><span class="mono">Page {{ events.page }} of {{ events.pages }}</span>{% if events.has_prev %}<a class="btn btn-ghost" href="{{ url_for('main.audit_history', page=events.prev_num, client_id=selected_client_id, action=selected_action, actor=selected_actor) }}">Previous</a>{% endif %}{% if events.has_next %}<a class="btn btn-ghost" href="{{ url_for('main.audit_history', page=events.next_num, client_id=selected_client_id, action=selected_action, actor=selected_actor) }}">Next</a>{% endif %}</div>{% endif %}
+{% endblock %}

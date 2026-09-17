@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Users — OBLIQ Audit{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1 class="page-title">Users</h1><p class="page-sub">{{ current_user.firm.name }} · administrator area</p></div></div>
+<div class="detail-grid">
+{% for user in users %}<div class="detail-item"><span class="detail-label">User</span><strong>{{ user.name }}</strong><span class="mono">{{ user.email }}</span><span class="role-tag role-{{ user.role.value }}">{{ user.role.value }}</span>{% if not user.is_active %}<span class="status-badge status-correction-required">Inactive</span>{% elif user.id != current_user.id %}<form method="POST" action="{{ url_for('main.delete_user', user_id=user.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger" type="submit">Remove user</button></form>{% endif %}</div>{% endfor %}
+</div>
+<section class="section-head"><h2>Create user</h2></section>
+<form class="stacked-form" method="POST" action="{{ url_for('main.create_user') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="name">Name</label><input id="name" type="text" name="name" required>
+    <label for="email">Email</label><input id="email" type="email" name="email" required>
+    <label for="role">Role</label><select id="role" name="role"><option value="staff">Staff</option><option value="reviewer">Reviewer</option><option value="admin">Admin</option></select>
+    <label for="password">Temporary password</label><input id="password" type="password" name="password" required minlength="8">
+    <button class="btn btn-primary" type="submit">Create user</button>
+</form>
+{% endblock %}

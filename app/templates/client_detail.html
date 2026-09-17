@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ client.name }} — OBLIQ Audit{% endblock %}
+
+{% block content %}
+<div class="breadcrumb"><a href="{{ url_for('main.dashboard') }}">Dashboard</a><span class="crumb-sep">/</span>{{ client.name }}</div>
+
+<div class="page-head"><div><h1 class="page-title">{{ client.name }}</h1><p class="page-sub">Client since {{ client.created_at|ist_datetime('%d %b %Y') }}</p></div><div class="action-row"><a class="btn btn-ghost" href="{{ url_for('main.client_audit', client_id=client.id) }}">Client audit trail</a>{% if current_user.is_staff() %}<button class="btn btn-primary" type="button" onclick="document.getElementById('new-document').classList.add('open')">Add document type</button>{% endif %}</div></div>
+
+<div class="section-head"><h2>Audit documents</h2><span class="mono">{{ documents|length }} required</span></div>
+<table class="ledger-table"><thead>
+                    <tr>
+                        <th>Document</th>
+                        <th>Status</th>
+                        <th>Version</th>
+                        <th>Uploaded</th>
+                        <th></th>
+                    </tr>
+                </thead><tbody>
+                    {% for doc in documents %}
+                    <tr>
+                        <td><strong>{{ doc.name }}</strong></td>
+                        <td>
+                            <span class="status-badge status-{{ doc.status.value.replace('_', '-') }}">
+                                {{ doc.status.value.replace('_', ' ')|title }}
+                            </span>
+                        </td>
+                        <td class="mono">
+                            {% if doc.object_key %}
+                            v{{ doc.version }}
+                            {% else %}
+                            —
+                            {% endif %}
+                        </td>
+                        <td class="mono">
+                            {% if doc.uploaded_at %}
+                            {{ doc.uploaded_at.strftime('%d %b %Y %H:%M') }}
+                            {% else %}
+                            Not uploaded
+                            {% endif %}
+                        </td>
+                        <td class="ledger-action">
+                            <a href="{{ url_for('main.document_detail', doc_id=doc.id) }}">Open →</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody></table>
+                {% if current_user.is_staff() %}
+                <div class="modal" id="new-document"><div class="modal-box"><h3>Add required document</h3><form class="stacked-form" method="POST" action="{{ url_for('main.add_document_requirement', client_id=client.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label for="document-name">Document name</label><input id="document-name" name="name" list="document-types" required placeholder="e.g. Trial Balance"><datalist id="document-types"><option value="Bank Statement"><option value="Sales Register"><option value="Purchase Register"><option value="GST Return"><option value="Expense Summary"></datalist><div class="modal-actions"><button class="btn btn-ghost" type="button" onclick="document.getElementById('new-document').classList.remove('open')">Cancel</button><button class="btn btn-primary" type="submit">Add requirement</button></div></form></div></div>
+                {% endif %}
+{% endblock %}

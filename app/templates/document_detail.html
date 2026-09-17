@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}{{ doc.name }} — OBLIQ Audit{% endblock %}
+{% block content %}
+<div class="breadcrumb"><a href="{{ url_for('main.dashboard') }}">Dashboard</a><span class="crumb-sep">/</span><a href="{{ url_for('main.client_detail', client_id=doc.client.id) }}">{{ doc.client.name }}</a><span class="crumb-sep">/</span>{{ doc.name }}</div>
+<div class="page-head"><div><h1 class="page-title">{{ doc.name }}</h1><p class="page-sub">{{ doc.client.name }}</p></div><span class="status-badge status-{{ doc.status.value.replace('_', '-') }}">{{ doc.status.value.replace('_', ' ')|title }}</span></div>
+<div class="detail-grid">
+    <div class="detail-item"><span class="detail-label">Status</span><span class="status-badge status-{{ doc.status.value.replace('_', '-') }}">{{ doc.status.value.replace('_', ' ')|title }}</span></div>
+    <div class="detail-item"><span class="detail-label">Version</span><span class="mono">{{ doc.version if doc.object_key else '—' }}</span></div>
+    <div class="detail-item"><span class="detail-label">Uploaded by</span><span>{{ doc.uploaded_by_user.name if doc.uploaded_by_user else '—' }}</span></div>
+    <div class="detail-item"><span class="detail-label">Uploaded</span><span class="mono">{{ doc.uploaded_at|ist_datetime if doc.uploaded_at else 'Not uploaded' }}</span></div>
+</div>
+{% if doc.review_comment %}<div class="comment-box"><span class="comment-label">Review comment</span><p>{{ doc.review_comment }}</p></div>{% endif %}
+{% if doc.object_key %}<p><a class="btn btn-ghost" href="{{ url_for('main.download_document', doc_id=doc.id) }}">Download {{ doc.original_filename }}</a></p>{% endif %}
+
+{% if current_user.is_staff() %}
+<section class="section-head"><h2>{% if doc.status.value == 'correction_required' %}Upload revised document{% else %}Upload document{% endif %}</h2></section>
+{% if doc.status.value == 'approved' %}<p class="muted">This document is approved. Contact a reviewer if changes are needed.</p>
+{% elif doc.status.value not in ['pending', 'correction_required'] %}<p class="muted">This document is under review and cannot be replaced.</p>
+{% else %}
+<form class="stacked-form" method="POST" action="{{ url_for('main.upload_document', doc_id=doc.id) }}" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="file">Document file</label><input id="file" type="file" name="file" required accept=".pdf,.png,.jpg,.jpeg,.xlsx,.xls,.csv,.doc,.docx">
+    <span class="muted">PDF, images, Excel, Word · max 16 MB</span>
+    <button class="btn btn-primary" type="submit">{% if doc.status.value == 'correction_required' %}Upload revised file{% else %}Upload{% endif %}</button>
+</form>
+{% endif %}
+{% endif %}
+
+{% if current_user.is_reviewer() %}
+<section class="section-head"><h2>Review actions</h2></section>
+{% if doc.status.value == 'uploaded' %}
+<form method="POST" action="{{ url_for('main.start_review', doc_id=doc.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-secondary" type="submit">Start review</button></form>
+{% elif doc.status.value == 'under_review' %}
+<form class="stacked-form" method="POST" action="{{ url_for('main.review_document', doc_id=doc.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label for="comment">Comment or reason</label><textarea id="comment" name="comment" rows="3" placeholder="Required when requesting correction."></textarea>
+    <div class="action-row"><button class="btn btn-success" type="submit" name="action" value="approve">Approve</button><button class="btn btn-danger" type="submit" name="action" value="request_correction">Request correction</button></div>
+</form>
+{% elif doc.status.value == 'approved' %}<p class="muted">This document has been approved.</p>
+{% elif doc.status.value == 'correction_required' %}<p class="muted">Waiting for staff to upload a revised version.</p>
+{% else %}<p class="muted">Document not yet uploaded.</p>{% endif %}
+{% endif %}
+
+<section class="section-title"><h2>Document history</h2></section>
+{% if history %}<div class="timeline">
+{% for event in history %}
+<div class="timeline-item"><div class="timeline-time mono">{{ event.created_at|ist_datetime }}</div><div class="timeline-rule"></div><div class="timeline-body"><p><strong>{{ event.actor_name }}</strong> {% if event.action == 'approved_document' %}<span class="status-badge status-approved">approved</span>{% elif event.action == 'requested_correction' %}<span class="status-badge status-correction-required">requested correction</span>{% else %}{{ event.action.replace('_', ' ') }}{% endif %}</p>{% if event.details %}<div class="timeline-comment">{{ event.details }}</div>{% endif %}</div></div>
+{% endfor %}</div>{% else %}<p class="empty">No history yet.</p>{% endif %}
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Audit trail — {{ client.name }}{% endblock %}
+{% block content %}
+<div class="breadcrumb"><a href="{{ url_for('main.dashboard') }}">Dashboard</a><span class="crumb-sep">/</span><a href="{{ url_for('main.client_detail', client_id=client.id) }}">{{ client.name }}</a><span class="crumb-sep">/</span>Audit trail</div>
+<div class="page-head"><div><h1 class="page-title">Audit trail</h1><p class="page-sub">{{ client.name }} — every recorded action, most recent first</p></div></div>
+<div class="timeline audit-timeline">
+{% for event in events %}
+    <article class="timeline-item">
+        <div class="timeline-time mono">{{ event.created_at|ist_datetime }}</div>
+        <div class="timeline-rule"></div>
+        <div class="timeline-body">
+            <p><strong>{{ event.actor_name }}</strong>
+            {% if event.action == 'approved_document' %} approved the document
+            {% elif event.action == 'requested_correction' %} requested a correction
+            {% elif event.action == 'started_review' %} started reviewing the document
+            {% elif event.action == 'uploaded_document' %} uploaded the document
+            {% elif event.action == 'uploaded_revised_document' %} uploaded a revised document
+            {% elif event.action == 'created_client' %} created this client
+            {% elif event.action == 'added_document_requirement' %} added a document requirement
+            {% else %} {{ event.action.replace('_', ' ') }}{% endif %}</p>
+            <p class="row-meta">
+                <span class="pill">{{ event.client.name if event.client else client.name }}</span>
+                {% if event.document %}<span class="pill">{{ event.document.name }}</span>{% elif event.entity_name %}<span class="pill">{{ event.entity_name }}</span>{% endif %}
+            </p>
+            {% if event.details %}<p class="timeline-comment">{{ event.details }}</p>{% endif %}
+        </div>
+    </article>
+{% else %}<p class="empty">No events recorded for this client yet.</p>{% endfor %}
+</div>
+{% endblock %}

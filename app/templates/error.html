@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} — OBLIQ Audit{% endblock %}
+{% block content %}
+<div class="error-box">
+    <div class="error-code">{{ code }}</div>
+    <h1 class="page-title">{{ title }}</h1>
+    <p class="page-sub">{{ message }}</p>
+    <a class="btn btn-primary" href="{{ url_for('main.dashboard') if current_user.is_authenticated else url_for('auth.login') }}">Return to the application</a>
+</div>
+{% endblock %}

@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}New Client — OBLIQ Audit{% endblock %}
+
+{% block content %}
+<div class="page-head"><div><h1 class="page-title">New client</h1><p class="page-sub">A standard document checklist will be created automatically.</p></div></div>
+<form class="stacked-form" method="POST"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label for="name">Client name</label><input id="name" type="text" name="name" required autofocus placeholder="ABC Traders Pvt. Ltd."><div class="action-row"><button class="btn btn-primary" type="submit">Create client</button><a class="btn btn-ghost" href="{{ url_for('main.dashboard') }}">Cancel</a></div></form>
+{% endblock %}

@@ -1,0 +1,193 @@
+x-app-env: &app-env
+  DATABASE_URL: postgresql://obliq:${POSTGRES_PASSWORD:-obliqpass}@pgbouncer:5432/audit_db
+  SECRET_KEY: ${SECRET_KEY:-dev-only-change-me}
+  REDIS_URL: redis://redis:6379/0
+  CELERY_BROKER_URL: redis://redis:6379/1
+  CELERY_RESULT_BACKEND: redis://redis:6379/2
+  MINIO_ENDPOINT: minio:9000
+  MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-localhost:9000}
+  MINIO_PUBLIC_SECURE: ${MINIO_PUBLIC_SECURE:-false}
+  MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+  MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-dev-minio-password}
+  MINIO_BUCKET: audit-docs
+  MINIO_SECURE: "false"
+  FLASK_ENV: ${FLASK_ENV:-development}
+  SESSION_TYPE: redis
+  CACHE_TYPE: RedisCache
+  RATELIMIT_STORAGE_URI: redis://redis:6379/3
+
+services:
+  # ---------- Data Layer ----------
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: obliq
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-obliqpass}
+      POSTGRES_DB: audit_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U obliq -d audit_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - backend
+
+  pgbouncer:
+    image: edoburu/pgbouncer:1.22.1-p0
+    environment:
+      DATABASE_URL: postgres://obliq:${POSTGRES_PASSWORD:-obliqpass}@db:5432/audit_db
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 1000
+      DEFAULT_POOL_SIZE: 50
+      MIN_POOL_SIZE: 10
+      RESERVE_POOL_SIZE: 10
+      AUTH_TYPE: scram-sha-256
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -p 5432 -U obliq -d audit_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  minio:
+    image: coollabsio/minio:RELEASE.2025-10-15T17-29-55Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-dev-minio-password}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"   # private API; object access still requires a signed URL
+      - "9001:9001"   # console
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "kill -0 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  createbuckets:
+    image: pgsty/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-dev-minio-password}; do sleep 2; done;
+      mc mb --ignore-existing local/audit-docs;
+      mc anonymous set private local/audit-docs;
+      exit 0;
+      "
+    networks:
+      - backend
+
+  migrate:
+    build: .
+    environment:
+      <<: *app-env
+      DATABASE_URL: postgresql://obliq:${POSTGRES_PASSWORD:-obliqpass}@db:5432/audit_db
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["python", "-c", "import app"]
+    networks:
+      - backend
+    restart: "no"
+
+  # ---------- Application Layer (horizontally scalable) ----------
+  web:
+    build: .
+    environment:
+      <<: *app-env
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      createbuckets:
+        condition: service_completed_successfully
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - backend
+      - frontend
+    # No ports exposed directly — traffic comes via Nginx
+    deploy:
+      replicas: 3
+    command: >
+      gunicorn
+        --bind 0.0.0.0:5000
+        --workers 2
+        --worker-class gevent
+        --worker-connections 1000
+        --timeout 60
+        --keep-alive 5
+        --access-logfile -
+        --error-logfile -
+        app:app
+
+  worker:
+    build: .
+    environment:
+      <<: *app-env
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - backend
+    command: celery -A app.celery_app.celery worker --loglevel=info --concurrency=4
+    deploy:
+      replicas: 2
+
+  # ---------- Edge / Load Balancer ----------
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "5000:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - web
+    networks:
+      - frontend
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+
+networks:
+  frontend:
+  backend:

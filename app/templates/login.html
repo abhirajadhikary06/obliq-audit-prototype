@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Sign in — OBLIQ Audit{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+    <section class="auth-card">
+        <div class="brand-lg">OBLIQ<span>audit</span></div>
+        <p class="auth-sub">A clear record for every audit document.</p>
+        <form class="stacked-form" method="POST" action="{{ url_for('auth.login') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label for="email">Email</label>
+            <input id="email" type="email" name="email" required autofocus placeholder="staff@abc.com">
+            <label for="password">Password</label>
+            <input id="password" type="password" name="password" required placeholder="password123">
+            <button class="btn btn-primary btn-block" type="submit">Sign in</button>
+        </form>
+        <div class="demo-creds">
+            <p class="demo-creds-title"><strong>Demo accounts</strong> · password <code>password123</code></p>
+            <table class="demo-table">
+                <tr><td>ABC &amp; Co.</td><td>staff, reviewer, admin</td></tr>
+                <tr><td>XYZ &amp; Co.</td><td>staff, reviewer, admin</td></tr>
+            </table>
+            <p class="demo-note">Each firm sees only its own clients, documents, and audit history.</p>
+        </div>
+    </section>
+</div>
+{% endblock %}
